@@ -12,8 +12,6 @@ class Frontend
 {
     public function __construct()
     {
-        $this->template_functions();
-
         add_action('template_redirect', array($this, 'redirect_non_logged_in_users'));
         add_action('wp_authenticate', array($this, 'authenticated'));
         add_action('rest_api_init', array($this, 'rest_api_init'));
@@ -49,8 +47,9 @@ class Frontend
 
         $website_url = $website_url . '/wp-json/crmc-single-sign-on/users';
 
-        $p =  $user->data->user_pass;
-
+        // password not getting set properly
+        // This really doesn't matter since user won't be
+        // logging in directly through the sister site
         $response = wp_remote_post( $website_url, array(
                 'method'      => 'POST',
                 'timeout'     => 45,
@@ -93,7 +92,7 @@ class Frontend
         // If they login on the gifted hire side of things the access token will get overriden and
         // then they will need to login on the portal side again to be able to seemlessly go from portal to gifted hire
 
-        $access_token = bin2hex(random_bytes(22, MCRYPT_DEV_URANDOM));
+        $access_token = bin2hex(random_bytes(22));
         $user = get_user_by('login', $username );
 
         delete_user_meta($user->data->ID, 'access_token');
@@ -132,7 +131,10 @@ class Frontend
         if ( is_wp_error( $response ) ) {
             $error_message = $response->get_error_message();
             echo "Something went wrong: $error_message";
-        } else {}
+        } else {
+
+
+        }
 
     }
 
@@ -160,9 +162,13 @@ class Frontend
         $password = $params['password'];
 
         if( null == username_exists( $user_email ) ) {
+            // password not getting set properly
+            // This really doesn't matter since user won't be
+            // logging in directly through the sister site
             $user_id = wp_create_user ( $username, $password, $user_email );
 
             $user = new WP_User( $user_id );
+            // todo need to figure out which roles to assign to the user once you get access to the backend of gifted hire
             $user->set_role( 'Administrator' );
         }
 
@@ -183,32 +189,6 @@ class Frontend
 
     }
 
-    public function template_functions()
-    {
-        global $crm_single_sign_on_link;
-
-        /**
-         * @param string $url The Unauthenticated URL to direct the user to
-         * @param string $link_text The Name of the Link
-         * @return string
-         */
-        $crm_single_sign_on_link = function($url, $link_text)
-        {
-            if(is_user_logged_in())
-            {
-                $user = wp_get_current_user();
-                $access_token = get_user_meta($user->data->ID, 'access_token', true);
-            }
-
-            return sprintf('<a href="%s?access_token=%s">%s</a>',
-                $url,
-                isset($access_token) ? $access_token : "",
-                $link_text
-            );
-
-        };
-    }
-
     /**
      * This gets called on all NON-ADMIN pages. This method checks to see if an access token
      * exists in the URL then checks to see if it is attached to a specific user and then attempts to log
@@ -218,6 +198,13 @@ class Frontend
     {
         if(isset($_GET['access_token']))
         {
+
+            if(empty($_GET['access_token']))
+            {
+                wp_safe_redirect( 'https://www.giftedhire.com/login/' );
+                exit();
+            }
+
             $access_token = $_GET['access_token'];
             $user = get_users(array('meta_key' => 'access_token', 'meta_value' => $access_token))[0];
 
@@ -235,6 +222,7 @@ class Frontend
                 exit();
             }
         }
+
     }
 
 }
