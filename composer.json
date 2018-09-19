@@ -1,0 +1,9 @@
+{
+  "name": "crm/single-sign-on",
+  "description": "Single Sign On Plugin for WP Sites",
+  "type": "wordpress-plugin",
+  "license": "proprietary",
+  "require": {
+    "composer/installers": "^1.0"
+  }
+}
