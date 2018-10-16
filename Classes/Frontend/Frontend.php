@@ -93,7 +93,8 @@ class Frontend
         // then they will need to login on the portal side again to be able to seemlessly go from portal to gifted hire
 
         $access_token = bin2hex(random_bytes(22));
-        $user = get_user_by('login', $username );
+
+        $user = get_user_by('login', $username ) ? get_user_by('login', $username ) : get_user_by('email', $username );
 
         delete_user_meta($user->data->ID, 'access_token');
         update_user_meta($user->data->ID, 'access_token', $access_token, $unique = true);
